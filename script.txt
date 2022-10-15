@@ -1,0 +1,63 @@
+
+!
+conf t
+no event manager applet ReNTP
+event manager applet ReNTP
+ event none
+ !event timer cron name 6HSaturday cron-entry "0 6 * * 6"
+ action 001 syslog msg "Start check NTP Status"
+ action 002 cli command "enable"
+ action 004 cli command "term length 0"
+ 
+ action 010 set i "0"
+ action 011 cli command "show ntp associations"
+ action 012 set cliass "$_cli_result"
+ action 013 foreach line "$cliass" "\n"
+ action 014  regexp "INIT" "$line"
+ action 015  if $_regexp_result eq "1"
+ action 016   increment i
+ action 017  end
+ action 018 end
+ action 019 if $i eq "0" goto 098
+ action 020 syslog msg "Fount $i bad ntp, continue"
+ !
+ action 030 set i "0"
+ action 031 cli command "show ntp conf"
+ action 032 set cliconf "$_cli_result"
+ action 033 foreach line "$cliconf" "\n"
+ action 034  regexp "ntp\s(server|peer)\s([0-9]+.[0-9]+.[0-9]+.[0-9]+)" "$line" match nctype ncip
+ action 035  if $_regexp_result eq "1"
+ action 036   set tmpstr "$match"
+ action 037   string trim "$tmpstr"
+ action 038   append ntpconfs "ntp $nctype $ncip\n"
+ action 039   increment i
+ action 040  end
+ action 041 end
+ action 042 if $i eq "0" goto 098
+ !action 043 syslog msg "$ntpconfs"
+ !  
+ action 050 set i "0"
+ action 051 foreach line "$cliass" "\n"
+ action 052  regexp "^[ -~+*][ ~+]([0-9]+.[0-9]+.[0-9]+.[0-9]+)\s+(.INIT.|[0-9]+.[0-9]+.[0-9]+.[0-9]+)" "$line" match gr1 gr2
+ action 053  if $_regexp_result eq "1"
+ action 054   increment i
+ !action 055   syslog msg "ID: $i, GR1: $gr1, GR2: $gr2"
+ !
+ action 060 set j "1"
+ action 061   foreach cnfine "$ntpconfs" "\n"
+ action 062   if $i eq "$j"
+ !action 063    syslog msg "BC: $cnfine"
+ action 065    cli command "conf t"
+ action 066    cli command "no $cnfine"
+ action 067    cli command "$cnfine"
+ action 068    cli command "end"
+ action 069   end
+ action 070  increment j
+ action 071 end
+ !
+ action 080  end
+ action 081 end
+ action 098 syslog msg "End Script"
+ action 099 exit
+ exit
+!

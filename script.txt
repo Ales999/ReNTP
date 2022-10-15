@@ -25,7 +25,7 @@ event manager applet ReNTP
  action 031 cli command "show ntp conf"
  action 032 set cliconf "$_cli_result"
  action 033 foreach line "$cliconf" "\n"
- action 034  regexp "ntp\s(server|peer)\s([0-9]+.[0-9]+.[0-9]+.[0-9]+)" "$line" match nctype ncip
+ action 034  regexp "ntp\s(server|peer)\s(.*)" "$line" match nctype ncip
  action 035  if $_regexp_result eq "1"
  action 036   set tmpstr "$match"
  action 037   string trim "$tmpstr"
@@ -43,17 +43,23 @@ event manager applet ReNTP
  action 054   increment i
  !action 055   syslog msg "ID: $i, GR1: $gr1, GR2: $gr2"
  !
- action 060 set j "1"
- action 061   foreach cnfine "$ntpconfs" "\n"
- action 062   if $i eq "$j"
- !action 063    syslog msg "BC: $cnfine"
- action 065    cli command "conf t"
- action 066    cli command "no $cnfine"
- action 067    cli command "$cnfine"
- action 068    cli command "end"
- action 069   end
- action 070  increment j
- action 071 end
+ action 060   regexp ".INIT." "$gr2"
+ action 061   if $_regexp_result eq "1"
+ action 062    set j "0"
+ !action 063    syslog msg "Found INIT, i=$i, j=$j"
+ action 064    foreach cnfine "$ntpconfs" "\n"
+ action 065     increment j
+ action 066     if $i eq "$j"
+ !action 067      syslog msg "BC: $cnfine, i=$i, j=$j"
+ action 068      cli command "conf t"
+ action 069      cli command "no $cnfine"
+ action 070      cli command "$cnfine"
+ action 071      cli command "end"
+ action 072      break
+ action 073     end
+ !action 074     syslog msg "J:$j, I:$i cnfine:$cnfine"
+ action 075    end
+ action 076   end
  !
  action 080  end
  action 081 end
